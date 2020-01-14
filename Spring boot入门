@@ -1,0 +1,136 @@
+## Spring Boot入门
+
+### Spring boot简介
+
+简化spring应用开发 约定大于配置 去繁从简 just run 就能构建一个独立的 产品级别的应用。
+
+#### 背景
+
+J2EE笨重的开发 繁多的配置 低下的开发效率 复杂的部署流程 第三方技术集成难度大
+
+#### 解决
+
+Spring 全家桶 时代
+
+Spring Boot ->J2EE一站式解决方案
+
+Spring Cloud ->分布式整体解决方案
+
+#### 优点
+
+1 快速创建   
+
+2 嵌入式的servlet容器 应用无需打包成War包 打成Jar包
+
+3 starters自动依赖与版本控制  
+
+4 自动配置 简化开发
+
+5 无需配置xml 无代码生成 开箱即用
+
+6 准生产级的运行时应用监控
+
+7 与云集算天然集成
+
+
+
+### 微服务
+
+### 环境准备
+
+jdk1.8
+
+maven3.x 谷粒学院
+
+idea2017
+
+Spring boot1.5.9
+
+
+
+#### 设置maven
+
+`<profile>
+  <id>jdk-1.8</id>
+  <activation>
+	  <activeByDefault>true</activeByDefault>
+	  <jdk>1.8</jdk>
+  <activation>
+  <properties>
+	<maven.compiler.source>1.8</maven.compiler.source>
+	<maven.compiler.target>1.8</maven.compiler.target>
+	<maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
+  </properties>
+</profile>`
+
+
+
+#### idea设置
+
+`configure->setting->plugin->build->maven` 勾选自己的maven
+
+勾选重写
+
+
+
+### Hello world
+
+功能
+
+浏览器发送请求 服务器响应 `Hello world`
+
+
+
+#### 1.创建maven工程 (jar)
+
+指定JDK 项目groupid articleid 目录等 完成。
+
+`maven projects neetds to be imported`
+
+选择自动导入
+
+#### 2.导入Spring boot相关依赖
+
+#### 3.编写一个主程序
+
+`main->java下新建HelloworldApplication`
+
+```Java
+@SpringBootApplication // 标注一个主程序类 说明这是一个Spring boot 应用
+public class DemoApplication {
+   public static void main(String[] args) {
+       // 启动Spring boot应用
+      SpringApplication.run(DemoApplication.class, args);
+   }
+}
+```
+
+#### 4.编写Controller
+
+```Java
+@Controller
+public class Hello {
+    @ResponseBody
+    @RequestMapping("/helloworld")
+    public String hello()
+    {
+        return "Hello world";
+    }
+}
+```
+
+
+
+#### 5.运行主程序测试
+
+`localhost` 默认响应error page
+
+#### 6.简化部署工作
+
+##### 1.引入jar包 plugin
+
+##### 2.mvn package执行
+
+##### 3.maven package打包 成功后会在目录target中生成jar包。
+
+##### 4.jar包拷贝到相对应的目录 在目录命令行运行 java -jar命令执行。
