@@ -91,8 +91,157 @@ slf4j有专门的解决方案。
 
 #### 3.Spring Boot日志的关系
 
-4.Spring Booth 日志默认配置
+分析依赖关系
+
+1.maven查看依赖
+
+2.pom文件中右键找到diagrams->show dependences
+
+```xml
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter</artifactId>
+</dependency>
+```
+
+Spring Boot内部依赖spring-boot-starter-logging来做日志
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-logging</artifactId>
+  <version>2.2.2.RELEASE</version>
+  <scope>compile</scope>
+</dependency>
+```
+
+spring-boot-starter-logging内部依赖以下jar包 目的在于将其他日志转为slf4j的相关依赖。
+
+```xml
+<dependency>
+  <groupId>ch.qos.logback</groupId>
+  <artifactId>logback-classic</artifactId>
+  <version>1.2.3</version>
+  <scope>compile</scope>
+</dependency>
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-to-slf4j</artifactId>
+  <version>2.12.1</version>
+  <scope>compile</scope>
+</dependency>
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>jul-to-slf4j</artifactId>
+  <version>1.7.29</version>
+  <scope>compile</scope>
+</dependency>
+```
+
+最后在三个jar包内依赖slf4j-api
+
+```xml
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-api</artifactId>
+</dependency>
+```
+
+总结:
+
+SpringBoot底层也是使用slf4j+logback的方式进行日志记录
+
+SpringBoot把其他日志都替换成了slf4j
+
+如果我们要引入其他框架 也需要先把框架的默认日志依赖排除掉。
+
+SpringBoot内部排除
+
+```xml
+<dependency>
+  <groupId>org.apache.httpcomponents</groupId>
+  <artifactId>httpclient</artifactId>
+  <version>4.5.10</version>
+  <scope>compile</scope>
+  <exclusions>
+    <exclusion>
+      <artifactId>commons-logging</artifactId>
+      <groupId>commons-logging</groupId>
+    </exclusion>
+  </exclusions>
+  <optional>true</optional>
+</dependency>
+```
+
+SpringBoot能自动适配所有日志 而且底层使用slf4j+logback的方式记录日志 引入其他框架的时候 只需要把这个框架依赖的日志框架排除掉。
+
+
+
+#### 4.Spring Booth 日志默认配置
+
+
+
+```Java
+Logger logger = LoggerFactory.getLogger(getClass());
+@Test
+public void testLog()
+{
+   // 日志的级别 由低到高 可以调整输出日志级别
+   this.logger.trace("trace日志");
+   this.logger.debug("debug日志");
+   this.logger.info("info日志");
+   this.logger.warn("警告日志");
+   this.logger.error("错误日志");
+}
+```
+
+SpringBoot默认输出的是info级别的日志。
+
+##### 配置log的级别
+
+```XML
+logging.level.com.example.demo=trace
+```
+
+##### 配置log文件
+
+```xml
+logging.file=/home/lysice/java/demo/demo.log
+```
+
+##### 配置日志文件目录在目录下生成日志spring.log
+
+```
+logging.path=/home/lysice/java/demo
+```
+
+```xml
+# 控制台输出日志格式
+logging.pattern.console=
+# 文件输出日志格式
+logging.pattern.file=
+```
+
+##### 日志输出格式 
+
+- %d           日期时间
+- %thread  线程名
+- %-5level  级别从左显示5个字符宽度
+- %logger[50] 表示logger名字最长50个字符 否则按照句点分割。
+- %msg 日志消息
+- %n       换行符
 
 5.指定日志文件和日志profile功能
 
+logback.xml可以直接被日志框架识别
+
+如果xml名称为 logback-spring 日志框架就不直接加载 配置 由Spring Boot加载 可以使用profile。在profile内部可以设置不同环境下的日志打印。
+
+<springProfile name="staging">    ** </springProfile> <springProfile name="dev | staging">    ** </springProfile> 
+
+<springProfile name="!production">    ** </springProfile>
+
 6.切换日志框架
+
+
+
