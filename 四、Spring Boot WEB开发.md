@@ -200,6 +200,11 @@ public String success(Map<String, Object> map)
     map.put("hello", "你好");
     return "success";
 }
+如果想接口和页面写在同一个控制器内
+    @Controller 
+    
+    @ResponseBody
+    @RequestMapping("/success")
 ```
 
 thymeleaf语法
@@ -445,4 +450,97 @@ _
 可以直接在 p标签内写 [[${user.name}]]
 
 #### 5.SpringMVC自动配置原理
+
+
+
+
+
+#### 实验
+
+1.展示首页 templates
+
+空方法 返回页面
+
+自定义mvcConfigureAdapter接管SpringMVC
+
+```Java
+@Configuration
+public class MyMvcConfig extends WebMvcConfigurationSupport {
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        super.addViewControllers(registry);
+        registry.addViewController("/a").setViewName("/index");
+        registry.addViewController("/index.html").setViewName("/index");
+    }
+}
+```
+
+Spring Boot自动配置了classpath:/static/下面的资源为静态资源，后来网上找了很多的方法都试过了，解决不了。
+
+  于是我重新写了一个项目，把这个旧项目的配置一个一个的移动过去，最后发现是我配置的拦截器的问题。因为我配置拦截器继承的类是：WebMvcConfigurationSupport这个类，它会让spring boot的自动配置失效。
+
+怎么解决呢？
+
+  第一种可以继承WebMvcConfigurerAdapter，当然如果是1.8+WebMvcConfigurerAdapter这个类以及过时了，可以直接实现WebMvcConfigurer接口，然后重写addInterceptors来添加拦截器：
+
+```
+@Configuration
+public` `class` `InterceptorConfig ``implements` `WebMvcConfigurer {
+```
+
+ 
+
+```
+  ``@Override
+  ``public` `void` `addInterceptors(InterceptorRegistry registry) {
+    ``registry.addInterceptor(``new` `UserInterceptor()).addPathPatterns(``"/user/**"``);
+    ``WebMvcConfigurer.``super``.addInterceptors(registry);
+  ``}
+  }
+```
+
+ 或者还是继承WebMvcConfigurationSupport，然后重写addResourceHandlers方法：
+
+```
+@Configuration
+public` `class` `InterceptorConfig ``extends` `WebMvcConfigurationSupport {
+```
+
+ 
+
+```Java
+  ``@Override
+  ``protected` `void` `addInterceptors(InterceptorRegistry registry) {
+    ``registry.addInterceptor(``new` `UserInterceptor()).addPathPatterns(``"/user/**"``);
+    ``super``.addInterceptors(registry);
+  ``}
+  
+  ``@Override
+  ``protected` `void` `addResourceHandlers(ResourceHandlerRegistry registry) {
+    ``registry.addResourceHandler(``"/**"``).addResourceLocations(``"classpath:/static/"``);
+    ``super``.addResourceHandlers(registry);
+  ``}
+  
+}
+```
+
+``
+
+```
+@Configuration
+public class MyMvcConfig extends WebMvcConfigurationSupport {
+    @Override
+    protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");
+        super.addResourceHandlers(registry);
+    }
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/a").setViewName("login");
+        registry.addViewController("/index.html").setViewName("login");
+    }
+}
+```
+
+2.
 
