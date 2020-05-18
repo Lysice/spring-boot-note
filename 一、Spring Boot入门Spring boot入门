@@ -95,8 +95,20 @@ Spring boot1.5.9
 
 `main->java下新建HelloworldApplication`
 
+
+
+@SpringBootApplication注解 组合了三个主要的注解
+
+1.Spring的 @Configuration 标明该类使用Spring基于Java的配置
+
+2.Spring 的 @ComponentScan 启用组件扫描
+
+这样你写的Web控制器类和其他组件才能被自动发现并注册为Spring应用程序上下文的bean。
+
+3.@EnableAutoConfiguration 开启Spring boot的自动配置
+
 ```Java
-@SpringBootApplication // 标注一个主程序类 说明这是一个Spring boot 应用
+@SpringBootApplication // 标注一个主程序类 说明这是一个Spring boot 应用 自动配置 组件扫描
 public class DemoApplication {
    public static void main(String[] args) {
        // 启动Spring boot应用
@@ -122,6 +134,8 @@ public class Hello {
 
 
 #### 5.运行主程序测试
+
+`mvn spring-boot:run`
 
 `localhost` 默认响应error page
 

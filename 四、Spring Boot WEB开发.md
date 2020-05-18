@@ -1,3 +1,5 @@
+
+
 #### 四、Web开发
 
 ##### 1.使用Spring Boot
@@ -200,6 +202,11 @@ public String success(Map<String, Object> map)
     map.put("hello", "你好");
     return "success";
 }
+如果想接口和页面写在同一个控制器内
+    @Controller 
+    
+    @ResponseBody
+    @RequestMapping("/success")
 ```
 
 thymeleaf语法
@@ -446,6 +453,7 @@ _
 
 #### 5.SpringMVC自动配置原理
 
+
 Spring Boot非常适合web应用程序开发。您可以使用嵌入式Tomcat、Jetty、Undertow或Netty创建一个独立的HTTP服务器。大多数web应用程序使用springboot-starter-web模块快速启动和运行。您还可以选择使用springboot-starter-web-flux模块来构建反应式web应用程序。
 
 https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-developing-web-applications
@@ -578,3 +586,667 @@ If you want to take complete control of Spring MVC, you can add your own `@Confi
 
 7.5 
 
+
+#### 实验
+
+1.展示首页 templates
+
+空方法 返回页面
+
+自定义mvcConfigureAdapter接管SpringMVC
+
+```Java
+@Configuration
+public class MyMvcConfig extends WebMvcConfigurationSupport {
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        super.addViewControllers(registry);
+        registry.addViewController("/a").setViewName("/index");
+        registry.addViewController("/index.html").setViewName("/index");
+    }
+}
+```
+
+Spring Boot自动配置了classpath:/static/下面的资源为静态资源，后来网上找了很多的方法都试过了，解决不了。
+
+  于是我重新写了一个项目，把这个旧项目的配置一个一个的移动过去，最后发现是我配置的拦截器的问题。因为我配置拦截器继承的类是：WebMvcConfigurationSupport这个类，它会让spring boot的自动配置失效。
+
+怎么解决呢？
+
+  第一种可以继承WebMvcConfigurerAdapter，当然如果是1.8+WebMvcConfigurerAdapter这个类以及过时了，可以直接实现WebMvcConfigurer接口，然后重写addInterceptors来添加拦截器：
+
+```
+@Configuration
+public` `class` `InterceptorConfig ``implements` `WebMvcConfigurer {
+```
+
+ 
+
+```
+  ``@Override
+  ``public` `void` `addInterceptors(InterceptorRegistry registry) {
+    ``registry.addInterceptor(``new` `UserInterceptor()).addPathPatterns(``"/user/**"``);
+    ``WebMvcConfigurer.``super``.addInterceptors(registry);
+  ``}
+  }
+```
+
+ 或者还是继承WebMvcConfigurationSupport，然后重写addResourceHandlers方法：
+
+```
+@Configuration
+public` `class` `InterceptorConfig ``extends` `WebMvcConfigurationSupport {
+```
+
+ 
+
+```Java
+  ``@Override
+  ``protected` `void` `addInterceptors(InterceptorRegistry registry) {
+    ``registry.addInterceptor(``new` `UserInterceptor()).addPathPatterns(``"/user/**"``);
+    ``super``.addInterceptors(registry);
+  ``}
+  
+  ``@Override
+  ``protected` `void` `addResourceHandlers(ResourceHandlerRegistry registry) {
+    ``registry.addResourceHandler(``"/**"``).addResourceLocations(``"classpath:/static/"``);
+    ``super``.addResourceHandlers(registry);
+  ``}
+  
+}
+```
+
+``
+
+```
+@Configuration
+public class MyMvcConfig extends WebMvcConfigurationSupport {
+    @Override
+    protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");
+        super.addResourceHandlers(registry);
+    }
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/a").setViewName("login");
+        registry.addViewController("/index.html").setViewName("login");
+    }
+}
+```
+
+2.自动导入bootstrap webjars
+
+pom.xml文件添加
+
+```
+<dependency>
+    <groupId>org.webjars</groupId>
+    <artifactId>bootstrap</artifactId>
+    <version>4.4.1</version>
+</dependency>
+<dependency>
+    <groupId>org.webjars</groupId>
+    <artifactId>jquery</artifactId>
+    <version>3.1.1</version>
+</dependency>
+```
+
+添加完毕
+
+3.使用thymeleaf引擎表达式
+
+```
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+```
+
+
+
+##### 国际化
+
+Spring-MVC
+
+1.编写国际化文件
+
+2.使用ResourceBundleMessageSource管理国际化资源文件
+
+3.在页面使用fmt:message取出国际化内容
+
+
+
+Springboot内只需要编写国际化文件
+
+1)编写国际化配置文件 抽取页面需要显示的国际化配置
+
+(1)resource 新建目录 i18n
+
+(2)添加login.properties
+
+(3)添加login_zh_CN.properties文件
+
+这时候 idea中可以直接操作添加国际化配置文件。
+
+2)Spring Boot自动配置好了管理国际化的组件。
+
+ResourceBundleAutoConfiguration
+
+basename
+
+application.properties
+
+```
+spring.messages.basename=i18n.login
+```
+
+3)去页面获取
+
+```
+<h1 class="h3 mb-3 font-weight-normal" th:text="#{login.tip}"></h1>
+```
+
+全局设置idea文件编码
+
+File>Other Setting>Settings for New Projects>File encodings设置默认utf8并且转换成ascll码。
+
+
+
+4)国际化 设置英文
+
+chrome://settings 设置语言 加入英语(美国) 刷新页面。
+
+根据浏览器语言显示
+
+5)点击按钮切换语言
+
+
+
+Spring boot国际化原理 
+
+国际化Locale(区域信息对象):LocaleResolver
+
+默认的就是根据请求头带来的区域信息获取LocaleResolver来解析语言。
+
+如果想在Spring Boot内部设置语言 则需要定义一个
+
+```html
+<a class="btn btn-sm" th:href="@{/index.html(l=zh_CN)}">中文</a>
+<a class="btn btn-sm" th:href="@{/login.html(l=en_US)}">English</a>
+```
+
+自定义自己的区域信息解析器
+
+```Java
+package com.example.springboot01helloworld.component;
+
+import org.springframework.web.servlet.LocaleResolver;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Locale;
+
+public class MyLocaleResolver implements LocaleResolver {
+
+    @Override
+    public Locale resolveLocale(HttpServletRequest httpServletRequest) {
+        String l = httpServletRequest.getParameter("l");
+        Locale locale = Locale.getDefault();
+        if (!StringUtils.isEmpty(l)) {
+            String[] split = l.split("_");
+            locale = new Locale(split[0], split[1]);
+        }
+        return locale;
+    }
+
+    @Override
+    public void setLocale(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Locale locale) {
+
+    }
+}
+```
+
+然后将这个解析器注册成组件。
+
+MyMvcConfig
+
+```
+@Bean
+public LocaleResolver localeResolver() {
+    return new MyLocaleResolver();
+}
+```
+
+
+
+### 
+
+##### 登录
+
+1）指定登录action
+
+```
+<form class="form-signin" action="dashboard.html" th:action="@{/user/login}" method="post">
+```
+
+2)编写登录接口
+
+LoginController.java
+
+```
+@RequestMapping(value="/user/login", method= RequestMethod.POST)
+public String login()
+{
+    return "dashboard";
+}
+```
+
+```
+@GetMapping
+@PostMapping
+@DeleteMapping
+@PutMapping
+public String login()
+{
+    return "dashboard";
+}
+```
+
+3)修改login name
+
+4)禁用thymeleaf缓存
+
+application.properties中 设置spring.thymeleaf.cache=false
+
+idea中 ctrl+F9重新编译
+
+5)显示错误消息
+
+```
+<p style="color:red" th:text="${msg}" th:if="${not #strings.isEmpty(msg)}"></p>
+```
+
+成功后先来到我们的成功页面。如果在页面F5刷新 会出现 确认重新提交。
+
+防止重复提交:重定向。
+
+重定向需要用到视图模板解析 加视图映射。
+
+MyMvcConfig中
+
+```
+registry.addViewController("/dashboard").setViewName("dashboard");
+```
+
+
+
+##### 拦截器-登录检查
+
+SpringMvc中的Interceptor
+
+自定义组件
+
+```Java
+package com.example.springboot01helloworld.component;
+
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * 登录检查
+ */
+public class LoginHandlerInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 目标方法执行之前
+        Object user = request.getSession().getAttribute("loginUser");
+        if (user == null) {
+            // 未登录
+            request.setAttribute("msg", "没有权限 请先登录");
+            request.getRequestDispatcher("/index.html").forward(request, response);
+            return false;
+        } else {
+            // 已登录
+            return true;
+        }
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+
+    }
+}
+```
+
+
+
+配置组件 MyMvcConfig
+
+```Java
+    @Override
+    protected void addInterceptors(InterceptorRegistry registry) {
+        super.addInterceptors(registry);
+
+        // 注册拦截器 拦截多层请求 排除路由
+        // 拦截其无需处理静态
+        registry.addInterceptor(new LoginHandlerInterceptor()).addPathPatterns("/**")
+                .excludePathPatterns("/index.html", "/", "/login", "/user/login");
+    }
+
+```
+
+最左上角展示用户名
+
+```
+<a class="navbar-brand col-sm-3 col-md-2 mr-0" href="http://getbootstrap.com/docs/4.0/examples/dashboard/#">
+   [[${session.loginUser}]]
+</a>
+```
+
+
+
+##### 员工列表
+
+要求
+
+1)Restful curd
+
+uri: /资源名称/资源标识 Http请求方式 区分对资源curd的操作
+
+|      | 普通curd  | restful curd    |
+| ---- | --------- | --------------- |
+| 查询 | getEmp    | GET emp         |
+| 添加 | addEmp    | POST emp        |
+| 修改 | updateEmp | PUT emp/{id}    |
+| 删除 | deleteEmp | DELETE emp/{id} |
+
+2)实验的请求路径
+
+|                              | 请求uri   | 请求方式 |
+| ---------------------------- | --------- | -------- |
+| 查询所有员工                 | emps      | GET      |
+| 查询某个                     | emps/{id} | GET      |
+| 添加的页面                   | emp       | GET      |
+| 添加员工                     | emp       | POST     |
+| 来到修改页面(查员工信息回显) | emp/{id}  | GET      |
+| 修改员工                     | emp/{id}  | PUT      |
+| 删除员工                     | emp/{id}  | DELETE   |
+|                              |           |          |
+
+员工列表
+
+抽取公共片段
+
+```Java
+<nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0" th:fragment="topbar">
+   <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="http://getbootstrap.com/docs/4.0/examples/dashboard/#">
+      [[${session.loginUser}]]
+   </a>
+   <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search">
+   <ul class="navbar-nav px-3">
+      <li class="nav-item text-nowrap">
+         <a class="nav-link" href="http://getbootstrap.com/docs/4.0/examples/dashboard/#">Sign out</a>
+      </li>
+   </ul>
+</nav>
+```
+
+```Java
+<!--       引入topbar-->
+      <div th:insert="~{dashboard::topbar}"></div>
+```
+
+三种引入功能片段的th属性
+
+th:insert  
+
+th:replace
+
+th:include
+
+效果:
+
+th:insert 给当前元素插入公共片段
+
+th:replace 将当前元素替换成当前公共片段
+
+th:include 将被引入
+
+
+
+1)高亮
+
+引入片段时候传入参数
+
+```
+<div th:replace="common/bar::#sidebar(activeUri='main.html')"></div>
+```
+
+```
+th:class="${activeUri == 'emps' ? 'nav-link active' : 'nav-link'}"
+```
+
+2)列表展示
+
+```
+<tr th:each="emp:${emps} ">
+    <td th:text="${emp.getId()}"></td>
+   <td th:text="${emp.getLastName()}"></td>
+   <td th:text="${emp.getGender() == 0}? '女': '男'"></td>
+   <td th:text="${emp.getDepartment().getDepartmentName()}"></td>
+   <td th:text="${emp.getBirth()}"></td>
+</tr>
+```
+
+
+
+#####  错误处理
+
+1）Sb的默认处理机制
+
+(1)返回一个默认的错误页面 浏览器
+
+(2)如果是其他客户端 默认响应json
+
+客户端切换成postman之后  
+
+{
+
+  "timestamp": 1585661753050,
+
+  "status": 404,
+
+  "error": "Not Found",
+
+  "message": "No message available",
+
+  "path": "/aaaaa"
+
+}
+
+
+
+原理参照
+
+SpringBoot org.springframework.boot.autoconfigure.web.ErrorMvcAutoConfiguration 错误处理的自动配置
+
+1.DefaultErrorAttributes
+
+（1）帮我们在页面共享信息 timestamp status error exception message errors JSR303错误
+
+(2)
+
+2.BasicErrorController
+
+处理默认的/error请求
+
+public ModelAndView errorHtml(){
+
+ResolverErrorView 去哪个页面 是由DefaultErrorViewResolver决定。
+
+默认去找error/404这样的页面
+
+}
+
+@RequestMapping
+
+public function error()
+
+3.ErrorPageCustomizer
+
+系统出现错误4xx/5xx等错误 ErrorPageCustomizer生效(定制错误响应规则) ErrorPage->path(配置文件中error.path:/error)
+
+4.DefaultErrorViewResolver
+
+
+
+2)如何定制错误响应
+
+(1)如何定制错误页面
+
+1）有模板引擎情况下 error/状态码.html 将错误页面命名为错误状态码 放在模板引擎文件夹下 error文件夹下/状态码.html
+
+可以使用4xx.html作为这种类型的所有错误。(优先精确查找)
+
+2)无模板引擎情况下 (模板引擎下找不到错误页面)
+
+默认在静态资源文件夹下查找static
+
+3)以上都没有 就默认来到sb的默认错误提示页面
+
+
+
+(2)如何定制json错误数据
+
+exception/UserNotExistException
+
+1.创建自己的异常类
+
+```Java
+package com.example.springboot01helloworld.exception;
+
+public class UserNotExistException extends RuntimeException {
+    public UserNotExistException() {
+        super("用户不存在");
+    }
+}
+```
+
+2.在控制器内使用
+
+```
+@RequestMapping("/hello")
+public String hello(@RequestParam("user") String user) {
+    if (user.equals("aaa")) {
+        throw new UserNotExistException();
+    }
+    return "Hello world";
+}
+```
+
+
+
+1.自定义错误处理器
+
+```Java
+package com.example.springboot01helloworld.Controller;
+
+import com.example.springboot01helloworld.exception.UserNotExistException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@ControllerAdvice
+public class MyExceptionHandler {
+    @ResponseBody
+    @ExceptionHandler(UserNotExistException.class)
+    public Map<String, Object>  handleException(Exception ex) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("code", "user.notexist");
+        map.put("message", ex.getMessage());
+        return map;
+    }
+}
+```
+
+缺点:没有自适应效果。。。
+
+2.转发到error进行自适应响应效果
+
+```Java
+    @ExceptionHandler(Exception.class)
+    public String  handleException(Exception ex, HttpServletRequest request) {
+        Map<String, Object> map = new HashMap<>();
+        request.setAttribute("javax.servlet.error.status_code", 500);
+        map.put("code", "user.notexist");
+        map.put("message", ex.getMessage());
+        return "forward:/error";
+    }
+```
+
+3.将我们的定制数据携带出去
+
+出现错误以后会来到/error请求 会被BasicErrorController处理 响应出去的数据是由
+
+getErrorAttributes得到的。(AbstractErrorController 规定的方法)。
+
+​    (1)完全编写一个errorController的实现类放入容器中。 或者编写一个子类 重写某个方法。
+
+​    (2)页面上能用的数据 或者json返回的数据都是通过errorAttributes.getErrorAttributes获得。
+
+​       容器中DefaultErrorAttributes.getErrorAttributes
+
+
+
+```Java
+package com.example.springboot01helloworld.component;
+
+import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.WebRequest;
+
+import java.util.Map;
+
+@Component 添加入sb的组建
+public class MyErrorAttributes extends DefaultErrorAttributes {
+    @Override
+    public Map<String, Object> getErrorAttributes(WebRequest webRequest, boolean includeStackTrace) {
+        Map<String, Object> map = super.getErrorAttributes(webRequest, includeStackTrace);
+        map.put("company", "mmm");
+        Map<String, Object> ext = (Map<String, Object>)webRequest.getAttribute("ext", 0);
+        map.put("ext", ext);
+        return map;
+    }
+}
+```
+
+```
+@ExceptionHandler(Exception.class)
+    public String  handleException(Exception ex, HttpServletRequest request) {
+        Map<String, Object> map = new HashMap<>();
+        request.setAttribute("javax.servlet.error.status_code", 500);
+        map.put("code", "user.notexist");
+        map.put("message", ex.getMessage());
+        request.setAttribute("ext", map);
+        return "forward:/error";
+    }
+```
+
+
+
+#### 配置嵌入式Servlet容器
+
+SpringBoot默认使用Tomcat作为嵌入式的Servlet容器。
+
+1)如何定制和修改Servlet容器的相关配置
+
+2)能否切换其他的Servlet容器
+>>>>>>> c7a898dee5bc19da54ef35f359e07dd508d1633f
