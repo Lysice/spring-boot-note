@@ -265,7 +265,7 @@ th:fragment 声明片段
 
 th:remove 移除
 
-##### 2.1 简单表达式
+###### 4.1 简单表达式
 
 | 语法 |              名称              |      描述      |          作用          |
 | :--: | :----------------------------: | :------------: | :--------------------: |
@@ -275,7 +275,7 @@ th:remove 移除
 | @{…} |      Link URL Expressions      |   链接表达式   | 用于表示各种超链接地址 |
 | ~{…} |      Fragment Expressions      |   片段表达式   | 引用一段公共的代码片段 |
 
-###### 2.1.1 ${}  
+####### 4.1.1 ${}  
 
 可以取值
 
@@ -315,7 +315,7 @@ Page 20 of 106
 #aggregates : methods for creating aggregates on arrays or collections.
 #ids : methods for dealing with id attributes that might be repeated (for example, as a result of an iteration)
 
-###### 2.1.2 *{}
+####### 4.1.2 *{}
 
 ```Java
 Dog dog = new Dog("dog1", 2);
@@ -364,19 +364,19 @@ return "success";
 
 配合th:object获取对象的值。
 
-###### 2.1.3 #{} 国际化内容
+####### 4.1.3 #{} 国际化内容
 
-###### 2.1.4 @{} 定义url
+####### 4.1.4 @{} 定义url
 
 @{http://localhost:80/v1/22(id)}
 
 不写域名则直接默认本项目下。
 
-###### 2.1.5 th:fragment
+###### 4.1.5 th:fragment
 
 实验内用。
 
-#####  2.2 字面值
+###### 4.2 字面值
 
 文本 th:text="work string"
 
@@ -394,7 +394,7 @@ Null
 <div th:if="${variable.something} == null"> .
 ```
 
-##### 2.3 文本操作
+###### 4.3 文本操作
 
 拼接文本
 
@@ -408,11 +408,11 @@ Null
 <span th:text="'Welcome to our application, ' + ${user.name} + '!'">
 ```
 
-##### 2.4 算数运算
+###### 4.4 算数运算
 
 +, - , * , / , %
 
-##### 2.5 条件运算
+###### 4.5 条件运算
 
 ```html
 <div th:if="${prodStat.count} &gt; 1">
@@ -425,24 +425,156 @@ If-then-else (if) ? (then) : (else)
 
 Default (value) ? (default value)
 
-##### 2.6 布尔运算
+###### 4.6 布尔运算
 
  and or ! not
 
-##### 2.7 比较运算
+###### 4.7 比较运算
 
 ```html
 > < >= <= gt lt ge le
       eq ne
 ```
 
-##### 2.8 无操作
+###### 4.8 无操作
 
 _
 
-###### 2.9 行内写法
+###### 4.9 行内写法
 
 可以直接在 p标签内写 [[${user.name}]]
 
 #### 5.SpringMVC自动配置原理
+
+Spring Boot非常适合web应用程序开发。您可以使用嵌入式Tomcat、Jetty、Undertow或Netty创建一个独立的HTTP服务器。大多数web应用程序使用springboot-starter-web模块快速启动和运行。您还可以选择使用springboot-starter-web-flux模块来构建反应式web应用程序。
+
+https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-developing-web-applications
+
+
+
+官方文档
+
+Spring MVC auto-configuration
+
+Spring Boot provides auto-configuration for Spring MVC that works well with most applications.
+
+The auto-configuration adds the following features on top of Spring’s defaults:
+
+- Inclusion of `ContentNegotiatingViewResolver` and `BeanNameViewResolver` beans.
+
+  - 自动配置了viewResolver(视图解析器: 根据方法返回值得到视图对象 视图对象决定如何渲染(转发 重定向))
+
+  - idea内查询WebMvcAutoConfiguration 查找ContentNegotiatingViewResolver
+
+  - ```
+    public class WebMvcAutoConfiguration {
+    。。。。
+    		@Bean
+            @ConditionalOnBean({ViewResolver.class})
+            @ConditionalOnMissingBean(
+                name = {"viewResolver"},
+                value = {ContentNegotiatingViewResolver.class}
+            )
+            public ContentNegotiatingViewResolver viewResolver(BeanFactory beanFactory) {
+                ContentNegotiatingViewResolver resolver = new ContentNegotiatingViewResolver();
+                resolver.setContentNegotiationManager((ContentNegotiationManager)beanFactory.getBean(ContentNegotiationManager.class));
+                resolver.setOrder(-2147483648);
+                return resolver;
+            }
+            
+            从ContentNegotiatingViewResolver点击进去 实现了ViewResolver接口。
+            public class ContentNegotiatingViewResolver extends WebApplicationObjectSupport implements ViewResolver
+    
+    
+    
+    实现ViewResolver接口的方法resolveViewName
+    @Nullable
+        public View resolveViewName(String viewName, Locale locale) throws Exception {
+            RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+            Assert.state(attrs instanceof ServletRequestAttributes, "No current ServletRequestAttributes");
+            List<MediaType> requestedMediaTypes = this.getMediaTypes(((ServletRequestAttributes)attrs).getRequest());
+            if (requestedMediaTypes != null) {
+            // 获取视图对象
+                List<View> candidateViews = this.getCandidateViews(viewName, locale, requestedMediaTypes);
+            // 选择最适合的视图对象
+                View bestView = this.getBestView(candidateViews, requestedMediaTypes, attrs);
+                if (bestView != null) {
+                    return bestView;
+                }
+            }
+    
+            String mediaTypeInfo = this.logger.isDebugEnabled() && requestedMediaTypes != null ? " given " + requestedMediaTypes.toString() : "";
+            if (this.useNotAcceptableStatusCode) {
+                if (this.logger.isDebugEnabled()) {
+                    this.logger.debug("Using 406 NOT_ACCEPTABLE" + mediaTypeInfo);
+                }
+    
+                return NOT_ACCEPTABLE_VIEW;
+            } else {
+                this.logger.debug("View remains unresolved" + mediaTypeInfo);
+                return null;
+            }
+        }
+        
+    ```
+
+  - `ContentNegotiatingViewResolver`组合所有视图解析器
+
+    如何定制?o我们可以自己给容器a添加一个视图解析器自动将其添加。
+
+- 
+
+- Support for serving static resources, including support for WebJars (covered [later in this document](https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-spring-mvc-static-content))).  静态资源文件夹路径 webjars
+
+- Automatic registration of `Converter`, `GenericConverter`, and `Formatter` beans. 
+
+  自动注册了converter等这些东西。
+
+  converter 转换器 类型转换
+
+  Formatter 格式化器 2017/12/12 ===Date
+
+  
+
+- Support for `HttpMessageConverters` (covered [later in this document](https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-spring-mvc-message-converters)).
+
+- Automatic registration of `MessageCodesResolver` (covered [later in this document](https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-spring-message-codes)).
+
+- Static `index.html` support. 静态首页
+
+- Custom `Favicon` support (covered [later in this document](https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-spring-mvc-favicon)).
+
+- Automatic use of a `ConfigurableWebBindingInitializer` bean (covered [later in this document](https://docs.spring.io/spring-boot/docs/2.2.3.RELEASE/reference/htmlsingle/#boot-features-spring-mvc-web-binding-initializer)).
+
+If you want to keep those Spring Boot MVC customizations and make more [MVC customizations](https://docs.spring.io/spring/docs/5.2.3.RELEASE/spring-framework-reference/web.html#mvc) (interceptors, formatters, view controllers, and other features), you can add your own `@Configuration` class of type `WebMvcConfigurer` but **without** `@EnableWebMvc`.
+
+If you want to provide custom instances of `RequestMappingHandlerMapping`, `RequestMappingHandlerAdapter`, or `ExceptionHandlerExceptionResolver`, and still keep the Spring Boot MVC customizations, you can declare a bean of type `WebMvcRegistrations` and use it to provide custom instances of those components.
+
+If you want to take complete control of Spring MVC, you can add your own `@Configuration` annotated with `@EnableWebMvc`, or alternatively add your own `@Configuration`-annotated `DelegatingWebMvcConfiguration` as described in the Javadoc of `@EnableWebMvc`.
+
+
+
+
+
+
+
+... todo
+
+6.WEB开发-扩展与全面接管SpringMVC
+
+7.实验
+
+默认访问首页
+
+资源 
+
+7.1 引入资源
+
+7.2 国际化
+
+7.3 登陆 & 拦截器
+
+7.4 Restful实验要求
+
+7.5 
 
